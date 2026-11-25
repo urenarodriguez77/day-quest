@@ -77,6 +77,23 @@ h1 span{color:var(--gold)}
 .blk.done .n{text-decoration:line-through;text-decoration-color:#ffd23f99}
 .blk.done .pts{background:var(--gold);color:#1a1300}
 .blk.done .pts::before{content:"✓ "}
+.tabs{display:flex;gap:8px;margin:0 0 12px}
+.tabs button{flex:1;min-height:46px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--mute);font:500 15px Rubik;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--panel2);color:var(--ink);border-color:var(--cyan);box-shadow:inset 0 -3px 0 var(--cyan)}
+.tabs button b{color:var(--gold);font-weight:700;margin-left:6px}
+.tabs button:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.blk.skin .t{color:#ff8cf2}
+.uph{font:400 clamp(22px,4vw,30px)/1.1 "Russo One";margin:28px 0 12px}
+.upnext{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.up{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+.up h3{margin:0 0 2px;font:700 17px Rubik}
+.up p{margin:0 0 8px;color:var(--mute);font-size:14px}
+.up ul{list-style:none;margin:0;padding:0}
+.up li{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:15px;align-items:baseline}
+.up li .t{font:400 12px "Russo One";color:var(--cyan);white-space:nowrap}
+.up li.skin .t{color:#ff8cf2}
+.up li .p{color:var(--gold);font:400 13px "Russo One"}
+.up li small{display:block;color:var(--mute);font-size:13px}
 .bonusline{margin:16px 0 0;padding:12px 14px;border-radius:16px;border:1px dashed #ff4d6d77;color:var(--mute);font-size:15px}
 .bonusline b{color:var(--coral)}
 .bonusline.got{border-style:solid;border-color:var(--coral);color:var(--ink);background:#ff4d6d14}
@@ -128,17 +145,25 @@ details ul{padding-left:18px;margin:8px 0}
     <button class="btn ghost" id="totoday" hidden>Back to today</button>
   </div>
 
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-t="sched" id="tab-sched"></button>
+    <button role="tab" data-t="skin" id="tab-skin"></button>
+  </div>
   <div class="list" id="list"></div>
   <div class="bonusline" id="bonus"></div>
+
+  <h2 class="uph">Up next</h2>
+  <div class="upnext" id="upnext"></div>
 
   <details>
     <summary>How points work</summary>
     <ul>
       <li>Tap a block when it's done to bank its points. Tapped one by mistake? Tap it again to undo.</li>
       <li>Big blocks pay more: photo editing 30, workouts, pottery, laundromat and meal prep 25, smaller tasks 5–20.</li>
-      <li>Clear every block in a day for a bonus: +50 on weekdays, +25 on weekends.</li>
+      <li>Skin care has its own tab: morning face 10, night face 10 (the night shows which treatment), body + hands 5.</li>
+      <li>Clear every block in a day, schedule and skin care, for a bonus: +50 on weekdays, +25 on weekends.</li>
       <li>Nothing resets at midnight. Every day is saved, and you can tap any past day in the grid to check off a block you forgot.</li>
-      <li>The meter tracks a 30-day run. A perfect 30 days is about 4,000 points, so 3,500 fills with a solid month, even with a few off days. Then a new 30-day run starts.</li>
+      <li>The meter tracks a 30-day run. A perfect 30 days is about 4,900 points, so 4,200 fills with a solid month, even with a few off days. Then a new 30-day run starts.</li>
       <li>Points are saved in this browser, so use the app on the same phone each day.</li>
     </ul>
     <button class="btn ghost" id="wipe">Start everything over</button>
@@ -156,7 +181,7 @@ details ul{padding-left:18px;margin:8px 0}
 
 <script>
 {
-const GOAL = 3500;
+const GOAL = 4200;
 const PRIZE = "a solo morning out: brunch + a fancy latte, plus $25 for a new handbuilding tool or glaze";
 const KEY = "nayaQuest.v1";
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -189,6 +214,27 @@ const SCHED = {
   6: () => [shower]
 };
 
+/* skin care, from Naya's Glow-Up Regimen; retinoid ramp-up skips Wednesdays for the first 2 weeks */
+const NIGHT = {
+  ret:["Night face: retinoid","Double cleanse, pea-sized retinoid on dry skin, eye cream, rich moisturizer"],
+  rec:["Night face: recovery","Double cleanse, niacinamide or hyaluronic serum, eye cream, rich moisturizer"],
+  acid:["Night face: exfoliating acid","Double cleanse, lactic or glycolic acid (no retinoid), eye cream, moisturizer"],
+  mask:["Night face: recovery + mask","Double cleanse, 10-min face mask, serum, rich moisturizer"]
+};
+function SKIN(d){
+  const w = d.getDay();
+  let n = ({0:"mask",1:"ret",2:"rec",3:"ret",4:"rec",5:"ret",6:"acid"})[w];
+  if(w===3 && d < new Date(2026,11,9)) n = "rec";
+  return [b(365,375,"6:05","Morning face","Cleanser, vitamin C serum, moisturizer, SPF 30–50",10),
+          b(1230,1245,"8:30",NIGHT[n][0],NIGHT[n][1],10),
+          b(1245,1260,"8:45","Body + hands","Rich cream on elbows, knees, heels; hand cream before bed",5)];
+}
+const allFor = d => [
+  ...SCHED[d.getDay()](d).map((x,i)=>Object.assign({},x,{id:"s"+i,tab:"sched"})),
+  ...SKIN(d).map((x,i)=>Object.assign({},x,{id:"k"+i,tab:"skin"}))
+];
+let tab = "sched";
+
 const keyOf = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const blocksFor = d => SCHED[d.getDay()](d);
 const bonusFor = d => (d.getDay()===0||d.getDay()===6) ? 25 : 50;
@@ -202,6 +248,7 @@ function fresh(){ return {start:keyOf(new Date()),days:{},rewarded:[],sound:true
 function load(){
   try{ state = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ state = fresh(); }
   if(!state.days) state.days = {};
+  for(const k in state.days){ const r = state.days[k]; r.done = r.done.map(v => typeof v === "number" ? "s"+v : v); }
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
 
@@ -215,12 +262,12 @@ function rollCycle(){
 const rec = k => state.days[k] || {done:[],bonus:false};
 function dayPoints(k){
   const r = state.days[k]; if(!r) return 0;
-  const d = parseKey(k), bl = blocksFor(d);
-  return r.done.reduce((a,i)=>a+(bl[i]?bl[i].p:0),0) + (r.bonus?bonusFor(d):0);
+  const d = parseKey(k), bl = allFor(d);
+  return bl.reduce((a,x)=>a+(r.done.includes(x.id)?x.p:0),0) + (r.bonus?bonusFor(d):0);
 }
 function status(k){
   const r = state.days[k]; if(!r || !r.done.length) return "";
-  return r.done.length >= blocksFor(parseKey(k)).length ? "full" : "part";
+  return allFor(parseKey(k)).every(x=>r.done.includes(x.id)) ? "full" : "part";
 }
 const cycleKeys = () => Array.from({length:CYCLE},(_,i)=>keyOf(addDays(parseKey(state.start),i)));
 const bankNow = () => cycleKeys().reduce((a,k)=>a+dayPoints(k),0);
@@ -238,15 +285,21 @@ function streak(){
 
 function render(){
   const now = new Date(), tk = keyOf(now), day = parseKey(sel), isToday = sel===tk;
-  const blocks = blocksFor(day), r = rec(sel), mins = now.getHours()*60+now.getMinutes();
-  const possible = blocks.reduce((a,x)=>a+x.p,0) + bonusFor(day);
+  const all = allFor(day), r = rec(sel), mins = now.getHours()*60+now.getMinutes();
+  const blocks = all.filter(x=>x.tab===tab), cleared = all.filter(x=>r.done.includes(x.id)).length;
+  const possible = all.reduce((a,x)=>a+x.p,0) + bonusFor(day);
   const earned = dayPoints(sel);
   $("dayname").textContent = isToday ? "Today · " + DAYS[day.getDay()] : DAYS[day.getDay()];
-  $("daysub").textContent = day.toLocaleDateString("en-US",{month:"long",day:"numeric"}) + " · " + r.done.length + " of " + blocks.length + " blocks cleared";
+  $("daysub").textContent = day.toLocaleDateString("en-US",{month:"long",day:"numeric"}) + " · " + cleared + " of " + all.length + " blocks cleared";
   $("totoday").hidden = isToday;
-  $("list").innerHTML = blocks.map((x,i)=>{
-    const done = r.done.includes(i), cur = isToday && !done && mins>=x.s && mins<x.e;
-    return `<button class="blk${done?" done":""}${cur?" now":""}" data-i="${i}" aria-pressed="${done}">
+  for(const t of ["sched","skin"]){
+    const el = $("tab-"+t), sub = all.filter(x=>x.tab===t);
+    el.setAttribute("aria-selected", tab===t);
+    el.innerHTML = (t==="sched"?"Schedule":"Skin care") + `<b>${sub.filter(x=>r.done.includes(x.id)).length}/${sub.length}</b>`;
+  }
+  $("list").innerHTML = blocks.map(x=>{
+    const done = r.done.includes(x.id), cur = isToday && !done && mins>=x.s && mins<x.e;
+    return `<button class="blk${x.tab==="skin"?" skin":""}${done?" done":""}${cur?" now":""}" data-id="${x.id}" aria-pressed="${done}">
       <span class="t">${x.t}</span>
       <span><span class="n">${x.n}</span>${x.d?`<br><span class="d">${x.d}</span>`:""}</span>
       <span class="pts">+${x.p}</span></button>`;
@@ -254,7 +307,7 @@ function render(){
   const bon = $("bonus");
   bon.className = "bonusline" + (r.bonus?" got":"");
   bon.innerHTML = r.bonus ? `<b>Full day cleared! +${bonusFor(day)} bonus banked.</b>`
-    : `Clear all ${blocks.length} blocks ${isToday?"today":"this day"} for a <b>+${bonusFor(day)} bonus</b>.`;
+    : `Clear all ${all.length} blocks (schedule + skin care) ${isToday?"today":"this day"} for a <b>+${bonusFor(day)} bonus</b>.`;
   $("today").textContent = fmt(earned) + " / " + fmt(possible);
   document.querySelector(".stat small").textContent = isToday ? "Today" : day.toLocaleDateString("en-US",{month:"short",day:"numeric"});
   $("total").textContent = fmt(totalNow());
@@ -274,21 +327,29 @@ function render(){
     return `<button class="cell ${s}${k===tk?" today":""}${k===sel?" sel":""}" data-k="${k}" ${future?"disabled":""} aria-label="${d.toDateString()}, ${p} points">
       <small>${DAYS[d.getDay()].slice(0,2)}</small><b>${d.getDate()}</b><span>${p?p:""}</span></button>`;
   }).join("");
+  $("upnext").innerHTML = [1,2].map(n=>{
+    const d = addDays(parseKey(tk),n), list = allFor(d).sort((a,b)=>a.s-b.s);
+    const tot = list.reduce((a,x)=>a+x.p,0) + bonusFor(d);
+    return `<div class="up"><h3>${n===1?"Tomorrow · ":""}${DAYS[d.getDay()]}</h3>
+      <p>${d.toLocaleDateString("en-US",{month:"long",day:"numeric"})} · ${list.length} blocks · up to ${tot} pts</p>
+      <ul>${list.map(x=>`<li class="${x.tab}"><span class="t">${x.t}</span><span>${x.n}${x.d?`<small>${x.d}</small>`:""}</span><span class="p">+${x.p}</span></li>`).join("")}</ul></div>`;
+  }).join("");
   $("snd").innerHTML = state.sound
     ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>'
     : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
   $("snd").setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
 }
 
-function tap(i, el){
+function tap(id, el){
   rollCycle();
-  const day = parseKey(sel), blocks = blocksFor(day), x = blocks[i], bon = bonusFor(day);
+  const day = parseKey(sel), all = allFor(day), x = all.find(v=>v.id===id), bon = bonusFor(day);
+  if(!x) return;
   const r = state.days[sel] = rec(sel);
-  if(r.done.includes(i)){
-    r.done = r.done.filter(v=>v!==i); r.bonus = false;
+  if(r.done.includes(id)){
+    r.done = r.done.filter(v=>v!==id); r.bonus = false;
   } else {
-    r.done.push(i);
-    const full = r.done.length === blocks.length;
+    r.done.push(id);
+    const full = all.every(v=>r.done.includes(v.id));
     if(full) r.bonus = true;
     const b = el.getBoundingClientRect();
     boom(b.left+b.width/2, b.top+b.height/2, x.p, full);
@@ -407,7 +468,8 @@ function sfx(big){
 function toast(html){ const el=$("toast"); el.innerHTML=html; el.classList.add("on"); setTimeout(()=>el.classList.remove("on"),2600); }
 
 /* ---------- EVENTS ---------- */
-$("list").addEventListener("click", e => { const el = e.target.closest(".blk"); if(el) tap(+el.dataset.i, el); });
+$("list").addEventListener("click", e => { const el = e.target.closest(".blk"); if(el) tap(el.dataset.id, el); });
+$("tabs").addEventListener("click", e => { const el = e.target.closest("[data-t]"); if(el){ tab = el.dataset.t; render(); } });
 $("grid").addEventListener("click", e => { const el = e.target.closest(".cell"); if(el && !el.disabled){ sel = el.dataset.k; render(); } });
 $("totoday").addEventListener("click", () => { sel = keyOf(new Date()); render(); });
 $("snd").addEventListener("click", () => { state.sound = !state.sound; save(); render(); });
