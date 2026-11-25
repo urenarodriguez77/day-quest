@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0b1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Day Quest">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Naya's Day Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: arcade hype, warm and a little ridiculous — every block cleared is a win
+   IDEA: a pinball / arcade cabinet scoreboard for a real mom's day
+   PICTURE: today's schedule as big glowing quest buttons, a reward meter on top
+   COLOUR and TYPE: deep ink night, laser cyan + hot coral, gold for points; Russo One + Rubik
+   LAYOUT: sticky meter on top, today's blocks in one column (two on wide screens) */
+:root{color-scheme:dark;--bg:#0c0b1a;--panel:#16142b;--panel2:#1e1b3a;--ink:#f3f1ff;--mute:#a9a5c8;--cyan:#39e6ff;--coral:#ff4d6d;--gold:#ffd23f;--line:#2c2850}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -200px,#231d4a 0%,var(--bg) 60%) fixed,var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+button{font:inherit;color:inherit}
+#app{max-width:980px;margin:0 auto;padding:0 max(4vw,14px,env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) max(4vw,14px,env(safe-area-inset-left))}
+#app.shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-3px)}30%,50%,70%{transform:translate(-7px,4px)}40%,60%{transform:translate(7px,-4px)}}
+header{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg) 82%,transparent);padding:calc(14px + env(safe-area-inset-top)) 0 18px;margin:0 calc(-1*max(4vw,14px));padding-inline:max(4vw,14px)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font:400 clamp(26px,5vw,40px)/1.05 "Russo One",sans-serif;margin:0;letter-spacing:.5px}
+h1 span{color:var(--gold)}
+.icon{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer}
+.icon:focus-visible,.blk:focus-visible,.btn:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.meter{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
+.mrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--mute)}
+.mrow b{color:var(--ink);font-weight:700}
+.bar{position:relative;height:26px;border-radius:13px;background:#0a0918;border:1px solid var(--line);margin:8px 0 6px;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:13px;background:repeating-linear-gradient(115deg,var(--gold) 0 14px,#ffb703 14px 28px);box-shadow:0 0 18px #ffd23f88;transition:width .9s cubic-bezier(.2,.9,.2,1);animation:slide 1.2s linear infinite;background-size:200% 100%}
+@keyframes slide{to{background-position:-60px 0}}
+.bar em{position:absolute;inset:0;display:grid;place-items:center;font:400 13px "Russo One";color:var(--ink);text-shadow:0 0 4px #000,0 0 8px #000}
+.prize{font-size:14px;color:var(--mute)}.prize b{color:var(--gold)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 18px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.stat small{display:block;color:var(--mute);font-size:13px}
+.stat strong{font:400 clamp(22px,4vw,30px)/1.1 "Russo One";color:var(--cyan)}
+.stat:nth-child(2) strong{color:var(--gold)}.stat:nth-child(3) strong{color:var(--coral)}
+.dayhead{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin:6px 0 12px}
+.dayhead h2{font:400 clamp(22px,4vw,30px)/1.1 "Russo One";margin:0}
+.dayhead p{margin:2px 0 0;color:var(--mute);font-size:15px}
+.week{display:flex;gap:6px}
+.month{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:10px}
+.cell{min-height:52px;border-radius:10px;border:1px solid var(--line);background:#0a0918;padding:4px 2px;text-align:center;cursor:pointer;line-height:1.15}
+.cell small{display:block;font-size:11px;color:var(--mute)}
+.cell b{display:block;font:400 14px "Russo One";color:var(--ink)}
+.cell span{display:block;font-size:11px;color:var(--gold)}
+.cell.part{border-color:#ffd23f77;background:#ffd23f12}
+.cell.full{border-color:var(--gold);background:#ffd23f2a;box-shadow:0 0 10px #ffd23f44}
+.cell.today{outline:2px solid var(--cyan);outline-offset:1px}
+.cell.sel{background:#39e6ff22;border-color:var(--cyan)}
+.cell:disabled{opacity:.35;cursor:default}
+.cell:focus-visible{outline:3px solid var(--cyan)}
+@media(max-width:600px){.grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr));gap:12px}
+.blk{position:relative;display:grid;grid-template-columns:84px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;text-align:left;min-height:76px;padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel));cursor:pointer;box-shadow:0 6px 0 #08071299,inset 0 1px 0 #ffffff14;transition:transform .12s,box-shadow .12s,border-color .2s}
+.blk:hover{border-color:#4a4390}
+.blk:active{transform:translateY(4px);box-shadow:0 2px 0 #08071299}
+.blk .t{font:400 14px/1.2 "Russo One";color:var(--cyan);white-space:nowrap}
+.blk .n{font-weight:700;font-size:17px;line-height:1.25}
+.blk .d{color:var(--mute);font-size:14px;line-height:1.35}
+.pts{font:400 15px "Russo One";color:var(--gold);background:#ffd23f1a;border:1px solid #ffd23f55;border-radius:999px;padding:6px 10px;white-space:nowrap}
+.blk.now{border-color:var(--cyan);box-shadow:0 6px 0 #08071299,0 0 0 1px var(--cyan),0 0 22px #39e6ff44}
+.blk.now .t::after{content:"Now";display:block;margin-top:4px;font:700 11px Rubik;color:var(--bg);background:var(--cyan);border-radius:6px;padding:1px 6px;width:max-content}
+.blk.done{background:linear-gradient(180deg,#2a2410,#1a170b);border-color:#ffd23f88}
+.blk.done .n{text-decoration:line-through;text-decoration-color:#ffd23f99}
+.blk.done .pts{background:var(--gold);color:#1a1300}
+.blk.done .pts::before{content:"✓ "}
+.bonusline{margin:16px 0 0;padding:12px 14px;border-radius:16px;border:1px dashed #ff4d6d77;color:var(--mute);font-size:15px}
+.bonusline b{color:var(--coral)}
+.bonusline.got{border-style:solid;border-color:var(--coral);color:var(--ink);background:#ff4d6d14}
+details{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;color:var(--mute);font-size:15px}
+summary{cursor:pointer;color:var(--ink);font-weight:500;min-height:28px}
+details ul{padding-left:18px;margin:8px 0}
+.btn{min-height:44px;padding:10px 18px;border-radius:12px;border:0;background:var(--gold);color:#1a1300;font:400 16px "Russo One";cursor:pointer}
+.btn.ghost{background:transparent;color:var(--mute);border:1px solid var(--line);font:500 14px Rubik}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:20}
+.modal{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:#05040ecc;padding:20px}
+.modal.on{display:grid}
+.card{max-width:440px;background:var(--panel2);border:2px solid var(--gold);border-radius:22px;padding:26px 22px;text-align:center;box-shadow:0 0 60px #ffd23f55}
+.card h3{font:400 clamp(26px,6vw,36px)/1.05 "Russo One";margin:0 0 10px;color:var(--gold)}
+.card p{margin:0 0 18px;color:var(--ink)}
+.toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);z-index:25;font:400 clamp(30px,8vw,64px)/1 "Russo One";color:var(--gold);text-align:center;text-shadow:0 0 18px #ff4d6d,0 0 40px #ffd23f;opacity:0;pointer-events:none;transition:opacity .25s,transform .35s cubic-bezier(.2,1.6,.4,1)}
+.toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.toast small{display:block;font-size:.4em;color:var(--ink);margin-top:8px}
+@media(max-width:600px){.blk{grid-template-columns:62px minmax(0,1fr) auto;gap:10px}.blk .t{font-size:12px}.stats{gap:8px}.stat{padding:10px}.week{gap:2px}.dot{width:30px}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div id="app">
+  <header>
+    <div class="top">
+      <h1>Naya's <span>Day Quest</span></h1>
+      <button class="icon" id="snd" aria-label="Sound on" title="Sound"></button>
+    </div>
+    <div class="meter">
+      <div class="mrow"><span>Reward meter</span><span><b id="bank">0</b> / <span id="goal"></span> pts</span></div>
+      <div class="bar" role="progressbar" aria-label="Reward meter" aria-valuemin="0" aria-valuemax="100" id="barwrap"><div class="fill" id="fill"></div><em id="pct">0%</em></div>
+      <div class="prize">Fill it to unlock: <b id="prizename"></b></div>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><small>Today</small><strong id="today">0</strong></div>
+    <div class="stat"><small>All-time points</small><strong id="total">0</strong></div>
+    <div class="stat"><small>Full-day streak</small><strong id="streak">0</strong></div>
+  </div>
+
+  <div class="month">
+    <div class="mrow"><span id="cyc"></span><span>Tap a day to see or fix it</span></div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div class="dayhead">
+    <div><h2 id="dayname"></h2><p id="daysub"></p></div>
+    <button class="btn ghost" id="totoday" hidden>Back to today</button>
+  </div>
+
+  <div class="list" id="list"></div>
+  <div class="bonusline" id="bonus"></div>
+
+  <details>
+    <summary>How points work</summary>
+    <ul>
+      <li>Tap a block when it's done to bank its points. Tapped one by mistake? Tap it again to undo.</li>
+      <li>Big blocks pay more: photo editing 30, workouts, pottery, laundromat and meal prep 25, smaller tasks 5–20.</li>
+      <li>Clear every block in a day for a bonus: +50 on weekdays, +25 on weekends.</li>
+      <li>Nothing resets at midnight. Every day is saved, and you can tap any past day in the grid to check off a block you forgot.</li>
+      <li>The meter tracks a 30-day run. A perfect 30 days is about 4,000 points, so 3,500 fills with a solid month, even with a few off days. Then a new 30-day run starts.</li>
+      <li>Points are saved in this browser, so use the app on the same phone each day.</li>
+    </ul>
+    <button class="btn ghost" id="wipe">Start everything over</button>
+  </details>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="card">
+    <h3 id="mt">Reward unlocked!</h3>
+    <p id="mtext"></p>
+    <button class="btn" id="mclose">Claim it</button>
+  </div>
+</div>
+
+<script>
+{
+const GOAL = 3500;
+const PRIZE = "a solo morning out: brunch + a fancy latte, plus $25 for a new handbuilding tool or glaze";
+const KEY = "nayaQuest.v1";
+const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+const b = (s,e,t,n,d,p) => ({s,e,t,n,d,p});
+const workout = b(495,555,"8:15","Workout","Home workout or a run",25);
+const shower  = b(555,585,"9:15","Shower","Every day of the week",10);
+const reset   = b(585,600,"9:45","Reset","Quick tidy before the big block",10);
+const editing = b(600,750,"10:00","Photo editing","10:00–12:30, a 2.5-hour block",30);
+const lunch   = b(750,780,"12:30","Lunch","",5);
+const io      = b(840,855,"2:00","Io pickup","",10);
+const uma     = b(875,880,"2:35","Uma pickup","",10);
+const family  = b(1110,1215,"Evening","Family routine","Dinner, baths, books, bedtime 8:15",15);
+
+function monday(date){
+  const potteryOn = date >= new Date(2027,1,22) && date <= new Date(2027,2,22,23,59);
+  return [workout,shower,reset,
+    potteryOn ? b(600,750,"10:00","Pottery: handbuilding","Manny Cantor Center, 10–12:30",25)
+              : b(600,750,"10:00","Free block","Free time or an extra photo editing block",20),
+    lunch, b(780,825,"1:00","House admin + bills","Mail, school forms, appointments, bills",15),
+    io, uma, b(1110,1260,"6:30","Date night","Grandma Irma comes over",15)];
+}
+const SCHED = {
+  0: () => [shower, b(1215,1260,"After bedtime","Weekly reset","Plan the week, pick dinners, approve the $200 grocery cart",20)],
+  1: monday,
+  2: () => [workout,shower,reset,editing,lunch,b(780,825,"1:00","Cleaning reset","Whole-house clean",20),io,uma,family],
+  3: () => [workout,shower,b(585,735,"9:45","Laundromat + errands","9:45–12:15, errands during the wash and dry",25),lunch,b(780,825,"1:00","Meal prep","Prep 2–3 weeknight dinners",25),io,uma,family],
+  4: () => [workout,shower,reset,editing,lunch,b(780,825,"1:00","Put laundry away + tidy","",15),io,b(960,970,"4:00","Uma chess pickup","Thursday chess",10),b(1110,1215,"Evening","Family routine","JP's game night at 7",15)],
+  5: () => [b(495,555,"8:15","Naya time","Sleep in, a slow walk, coffee out",15),shower,b(585,750,"9:45","Naya time","Friends, a gallery, shooting your own photos, or rest",15),b(750,780,"12:30","Lunch","Out or at home",5),b(780,825,"1:00","Naya time","No chores, no work",10),io,uma,family],
+  6: () => [shower]
+};
+
+const keyOf = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const blocksFor = d => SCHED[d.getDay()](d);
+const bonusFor = d => (d.getDay()===0||d.getDay()===6) ? 25 : 50;
+
+const CYCLE = 30;
+const parseKey = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+
+let state, sel = keyOf(new Date());
+function fresh(){ return {start:keyOf(new Date()),days:{},rewarded:[],sound:true}; }
+function load(){
+  try{ state = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY)||"{}")); }catch(e){ state = fresh(); }
+  if(!state.days) state.days = {};
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* roll the 30-day run forward once it's over; past days are kept */
+function rollCycle(){
+  const today = parseKey(keyOf(new Date()));
+  let s = parseKey(state.start), moved = false;
+  while(addDays(s,CYCLE) <= today){ s = addDays(s,CYCLE); moved = true; }
+  if(moved){ state.start = keyOf(s); save(); }
+}
+const rec = k => state.days[k] || {done:[],bonus:false};
+function dayPoints(k){
+  const r = state.days[k]; if(!r) return 0;
+  const d = parseKey(k), bl = blocksFor(d);
+  return r.done.reduce((a,i)=>a+(bl[i]?bl[i].p:0),0) + (r.bonus?bonusFor(d):0);
+}
+function status(k){
+  const r = state.days[k]; if(!r || !r.done.length) return "";
+  return r.done.length >= blocksFor(parseKey(k)).length ? "full" : "part";
+}
+const cycleKeys = () => Array.from({length:CYCLE},(_,i)=>keyOf(addDays(parseKey(state.start),i)));
+const bankNow = () => cycleKeys().reduce((a,k)=>a+dayPoints(k),0);
+const totalNow = () => Object.keys(state.days).reduce((a,k)=>a+dayPoints(k),0);
+
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString("en-US");
+
+function streak(){
+  let n = 0, d = new Date();
+  if(status(keyOf(d)) !== "full") d = addDays(d,-1);
+  while(status(keyOf(d)) === "full"){ n++; d = addDays(d,-1); }
+  return n;
+}
+
+function render(){
+  const now = new Date(), tk = keyOf(now), day = parseKey(sel), isToday = sel===tk;
+  const blocks = blocksFor(day), r = rec(sel), mins = now.getHours()*60+now.getMinutes();
+  const possible = blocks.reduce((a,x)=>a+x.p,0) + bonusFor(day);
+  const earned = dayPoints(sel);
+  $("dayname").textContent = isToday ? "Today · " + DAYS[day.getDay()] : DAYS[day.getDay()];
+  $("daysub").textContent = day.toLocaleDateString("en-US",{month:"long",day:"numeric"}) + " · " + r.done.length + " of " + blocks.length + " blocks cleared";
+  $("totoday").hidden = isToday;
+  $("list").innerHTML = blocks.map((x,i)=>{
+    const done = r.done.includes(i), cur = isToday && !done && mins>=x.s && mins<x.e;
+    return `<button class="blk${done?" done":""}${cur?" now":""}" data-i="${i}" aria-pressed="${done}">
+      <span class="t">${x.t}</span>
+      <span><span class="n">${x.n}</span>${x.d?`<br><span class="d">${x.d}</span>`:""}</span>
+      <span class="pts">+${x.p}</span></button>`;
+  }).join("");
+  const bon = $("bonus");
+  bon.className = "bonusline" + (r.bonus?" got":"");
+  bon.innerHTML = r.bonus ? `<b>Full day cleared! +${bonusFor(day)} bonus banked.</b>`
+    : `Clear all ${blocks.length} blocks ${isToday?"today":"this day"} for a <b>+${bonusFor(day)} bonus</b>.`;
+  $("today").textContent = fmt(earned) + " / " + fmt(possible);
+  document.querySelector(".stat small").textContent = isToday ? "Today" : day.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+  $("total").textContent = fmt(totalNow());
+  const st = streak(); $("streak").textContent = st + (st===1?" day":" days");
+  const bank = bankNow();
+  $("bank").textContent = fmt(bank);
+  $("goal").textContent = fmt(GOAL);
+  const pc = Math.min(100, Math.round(bank/GOAL*100));
+  $("fill").style.width = pc + "%";
+  $("pct").textContent = pc + "%" + (state.rewarded.length ? "  ·  rewards earned: " + state.rewarded.length : "");
+  $("barwrap").setAttribute("aria-valuenow", pc);
+  $("prizename").textContent = PRIZE;
+  const keys = cycleKeys(), dayNo = keys.indexOf(tk)+1;
+  $("cyc").innerHTML = `<b>Day ${dayNo} of ${CYCLE}</b> · ${parseKey(keys[0]).toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${parseKey(keys[CYCLE-1]).toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
+  $("grid").innerHTML = keys.map(k=>{
+    const d = parseKey(k), s = status(k), p = dayPoints(k), future = k > tk;
+    return `<button class="cell ${s}${k===tk?" today":""}${k===sel?" sel":""}" data-k="${k}" ${future?"disabled":""} aria-label="${d.toDateString()}, ${p} points">
+      <small>${DAYS[d.getDay()].slice(0,2)}</small><b>${d.getDate()}</b><span>${p?p:""}</span></button>`;
+  }).join("");
+  $("snd").innerHTML = state.sound
+    ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>'
+    : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
+  $("snd").setAttribute("aria-label", state.sound ? "Sound on" : "Sound off");
+}
+
+function tap(i, el){
+  rollCycle();
+  const day = parseKey(sel), blocks = blocksFor(day), x = blocks[i], bon = bonusFor(day);
+  const r = state.days[sel] = rec(sel);
+  if(r.done.includes(i)){
+    r.done = r.done.filter(v=>v!==i); r.bonus = false;
+  } else {
+    r.done.push(i);
+    const full = r.done.length === blocks.length;
+    if(full) r.bonus = true;
+    const b = el.getBoundingClientRect();
+    boom(b.left+b.width/2, b.top+b.height/2, x.p, full);
+    if(full) toast(`DAY CLEARED!<small>+${bon} bonus points</small>`);
+    if(bankNow() >= GOAL && !state.rewarded.includes(state.start)){
+      state.rewarded.push(state.start);
+      setTimeout(()=>{ $("mtext").textContent = "You filled the meter. You've earned " + PRIZE + "."; $("modal").classList.add("on"); boom(innerWidth/2, innerHeight/2, 0, true); }, 3100);
+    }
+  }
+  if(!r.done.length) delete state.days[sel];
+  save(); render();
+}
+
+/* ---------- EXPLOSION + LASER SHOW ---------- */
+const cv = $("fx"), cx = cv.getContext("2d");
+const COLS = ["#39e6ff","#ff4d6d","#ffd23f","#7dff6b","#ff8cf2","#ffffff"];
+let parts=[], beams=[], rings=[], pops=[], flash=0, end=0, raf=0, dpr=1;
+function size(){ dpr = Math.min(2, devicePixelRatio||1); cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; }
+size(); addEventListener("resize", size);
+const R = (a,b) => a + Math.random()*(b-a);
+
+function burst(x,y,n,spd){
+  for(let k=0;k<n;k++){
+    const a = R(0,Math.PI*2), v = R(1,spd);
+    parts.push({x,y,px:x,py:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:COLS[k%COLS.length],w:R(1.2,3.6),life:R(60,170),age:0});
+  }
+  rings.push({x,y,r:4,v:16,a:1,c:"#ffffff"},{x,y,r:2,v:10,a:1,c:"#ffd23f"},{x,y,r:1,v:6,a:1,c:"#ff4d6d"});
+}
+function boom(x,y,pts,big){
+  const t = performance.now(); end = Math.max(end, t+3000); flash = big?1:.8;
+  burst(x,y,big?360:220,big?19:15);
+  if(big) [350,800,1300,1800].forEach(ms=>setTimeout(()=>burst(R(.15,.85)*innerWidth,R(.15,.6)*innerHeight,160,13),ms));
+  const W = innerWidth, H = innerHeight;
+  const origins = [[0,0],[W,0],[W/2,H+10],[0,H*.6],[W,H*.6],[W*.25,-10],[W*.75,-10]];
+  const n = big?18:12;
+  for(let k=0;k<n;k++){
+    const o = origins[k%origins.length];
+    beams.push({ox:o[0],oy:o[1],a0:Math.atan2(y-o[1],x-o[0]),amp:R(.25,.9),f:R(.6,1.6),ph:R(0,6.28),
+      c:COLS[k%5],w:R(2,4.5),t0:t+R(0,500),dur:R(1900,2500)});
+  }
+  if(pts) pops.push({x,y,s:"+"+pts,t});
+  const app = $("app"); app.classList.remove("shake"); void app.offsetWidth; app.classList.add("shake");
+  sfx(big);
+  if(!raf) raf = requestAnimationFrame(loop);
+}
+function loop(t){
+  const W = innerWidth, H = innerHeight;
+  cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
+  cx.globalCompositeOperation = "lighter";
+  const L = Math.hypot(W,H)*1.2;
+  for(const bm of beams){
+    const p = (t-bm.t0)/bm.dur; if(p<0||p>1) continue;
+    const a = bm.a0 + Math.sin(p*Math.PI*2*bm.f+bm.ph)*bm.amp, al = Math.sin(p*Math.PI);
+    const ex = bm.ox+Math.cos(a)*L, ey = bm.oy+Math.sin(a)*L;
+    cx.globalAlpha = al*.85; cx.strokeStyle = bm.c; cx.lineWidth = bm.w*3; cx.shadowBlur = 24; cx.shadowColor = bm.c;
+    cx.beginPath(); cx.moveTo(bm.ox,bm.oy); cx.lineTo(ex,ey); cx.stroke();
+    cx.globalAlpha = al; cx.strokeStyle = "#fff"; cx.lineWidth = bm.w*.6; cx.shadowBlur = 0;
+    cx.beginPath(); cx.moveTo(bm.ox,bm.oy); cx.lineTo(ex,ey); cx.stroke();
+    cx.fillStyle = bm.c; cx.beginPath(); cx.arc(bm.ox,bm.oy,bm.w*3,0,7); cx.fill();
+  }
+  beams = beams.filter(bm => t < bm.t0+bm.dur);
+  cx.shadowBlur = 0;
+  for(const q of parts){
+    q.px=q.x; q.py=q.y; q.vx*=.975; q.vy=q.vy*.975+.13; q.x+=q.vx; q.y+=q.vy; q.age++;
+    const al = 1-q.age/q.life; if(al<=0) continue;
+    cx.globalAlpha = al; cx.strokeStyle = q.c; cx.lineWidth = q.w; cx.lineCap = "round";
+    cx.beginPath(); cx.moveTo(q.px-q.vx*2,q.py-q.vy*2); cx.lineTo(q.x,q.y); cx.stroke();
+  }
+  parts = parts.filter(q => q.age<q.life);
+  for(const r of rings){
+    r.r+=r.v; r.v*=.955; r.a-=.022; if(r.a<=0) continue;
+    cx.globalAlpha = r.a; cx.strokeStyle = r.c; cx.lineWidth = 6*r.a+1;
+    cx.beginPath(); cx.arc(r.x,r.y,r.r,0,7); cx.stroke();
+  }
+  rings = rings.filter(r => r.a>0);
+  cx.globalCompositeOperation = "source-over";
+  if(flash>.01){ cx.globalAlpha = flash*.55; cx.fillStyle = "#fff"; cx.fillRect(0,0,W,H); flash*=.86; }
+  for(const pp of pops){
+    const k = (t-pp.t)/1400; if(k>1) continue;
+    cx.globalAlpha = 1-k; cx.fillStyle = "#ffd23f"; cx.font = `${44+k*20}px "Russo One"`; cx.textAlign = "center";
+    cx.shadowBlur = 20; cx.shadowColor = "#ff4d6d"; cx.fillText(pp.s, pp.x, pp.y-30-k*90); cx.shadowBlur = 0;
+  }
+  pops = pops.filter(pp => t-pp.t<1400);
+  cx.globalAlpha = 1;
+  if(t<end || parts.length || beams.length) raf = requestAnimationFrame(loop);
+  else { cx.clearRect(0,0,W,H); raf = 0; }
+}
+
+/* ---------- SOUND ---------- */
+let ac;
+function sfx(big){
+  if(!state.sound) return;
+  try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended") ac.resume();
+    const t = ac.currentTime, out = ac.createGain(); out.gain.value = .5; out.connect(ac.destination);
+    const len = ac.sampleRate*1.6, buf = ac.createBuffer(1,len,ac.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len,3);
+    const ns = ac.createBufferSource(); ns.buffer = buf;
+    const lp = ac.createBiquadFilter(); lp.type="lowpass"; lp.frequency.setValueAtTime(2400,t); lp.frequency.exponentialRampToValueAtTime(120,t+1.4);
+    ns.connect(lp).connect(out); ns.start(t);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(32,t+.9);
+    g.gain.setValueAtTime(.9,t); g.gain.exponentialRampToValueAtTime(.001,t+1);
+    o.connect(g).connect(out); o.start(t); o.stop(t+1);
+    const n = big?9:6;
+    for(let k=0;k<n;k++){
+      const s = t+.15+k*.28, z = ac.createOscillator(), zg = ac.createGain();
+      z.type = "sawtooth"; z.frequency.setValueAtTime(R(1400,2400),s); z.frequency.exponentialRampToValueAtTime(R(120,260),s+.25);
+      zg.gain.setValueAtTime(.0001,s); zg.gain.exponentialRampToValueAtTime(.12,s+.01); zg.gain.exponentialRampToValueAtTime(.0001,s+.27);
+      z.connect(zg).connect(out); z.start(s); z.stop(s+.3);
+    }
+  }catch(e){}
+}
+
+function toast(html){ const el=$("toast"); el.innerHTML=html; el.classList.add("on"); setTimeout(()=>el.classList.remove("on"),2600); }
+
+/* ---------- EVENTS ---------- */
+$("list").addEventListener("click", e => { const el = e.target.closest(".blk"); if(el) tap(+el.dataset.i, el); });
+$("grid").addEventListener("click", e => { const el = e.target.closest(".cell"); if(el && !el.disabled){ sel = el.dataset.k; render(); } });
+$("totoday").addEventListener("click", () => { sel = keyOf(new Date()); render(); });
+$("snd").addEventListener("click", () => { state.sound = !state.sound; save(); render(); });
+$("mclose").addEventListener("click", () => $("modal").classList.remove("on"));
+let armed = false;
+$("wipe").addEventListener("click", e => {
+  if(!armed){ armed = true; e.target.textContent = "Tap again to erase all points and history"; setTimeout(()=>{armed=false;e.target.textContent="Start everything over";},4000); return; }
+  state = fresh(); sel = keyOf(new Date()); save(); render(); armed = false; e.target.textContent = "Start everything over";
+});
+
+/* ---------- NEW DAY: move the view to the new date, keep every day's record ---------- */
+let lastToday = keyOf(new Date());
+function tick(){
+  const k = keyOf(new Date());
+  if(k !== lastToday){ if(sel === lastToday) sel = k; lastToday = k; rollCycle(); }
+  render();
+}
+setInterval(tick, 60000);
+document.addEventListener("visibilitychange", () => { if(!document.hidden) tick(); });
+
+load(); rollCycle(); render();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
