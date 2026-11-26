@@ -160,10 +160,10 @@ details ul{padding-left:18px;margin:8px 0}
     <ul>
       <li>Tap a block when it's done to bank its points. Tapped one by mistake? Tap it again to undo.</li>
       <li>Big blocks pay more: photo editing 30, workouts, pottery, laundromat and meal prep 25, smaller tasks 5–20.</li>
-      <li>Skin care has its own tab: morning face 10, night face 10 (the night shows which treatment), body + hands 5.</li>
+      <li>The Glow up tab has skin care and Cronometer: morning face 10, night face 10 (it shows that night's treatment), body + hands 5, plus Cronometer logging after breakfast (5), lunch (5) and dinner with a check of the day's totals (10).</li>
       <li>Clear every block in a day, schedule and skin care, for a bonus: +50 on weekdays, +25 on weekends.</li>
       <li>Nothing resets at midnight. Every day is saved, and you can tap any past day in the grid to check off a block you forgot.</li>
-      <li>The meter tracks a 30-day run. A perfect 30 days is about 4,900 points, so 4,200 fills with a solid month, even with a few off days. Then a new 30-day run starts.</li>
+      <li>The meter tracks a 30-day run. A perfect 30 days is about 5,500 points, so 4,700 fills with a solid month, even with a few off days. Then a new 30-day run starts.</li>
       <li>Points are saved in this browser, so use the app on the same phone each day.</li>
     </ul>
     <button class="btn ghost" id="wipe">Start everything over</button>
@@ -181,7 +181,7 @@ details ul{padding-left:18px;margin:8px 0}
 
 <script>
 {
-const GOAL = 4200;
+const GOAL = 4700;
 const PRIZE = "a solo morning out: brunch + a fancy latte, plus $25 for a new handbuilding tool or glaze";
 const KEY = "nayaQuest.v1";
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -226,6 +226,9 @@ function SKIN(d){
   let n = ({0:"mask",1:"ret",2:"rec",3:"ret",4:"rec",5:"ret",6:"acid"})[w];
   if(w===3 && d < new Date(2026,11,9)) n = "rec";
   return [b(365,375,"6:05","Morning face","Cleanser, vitamin C serum, moisturizer, SPF 30–50",10),
+          b(440,450,"7:20","Cronometer: breakfast","Log it, protein first (aim for 30 g)",5),
+          b(780,790,"1:00","Cronometer: lunch","Log lunch, then the 1:45 protein snack",5),
+          b(1215,1230,"8:15","Cronometer: dinner + totals","Log dinner and check the day: 115 g protein, 28 g fiber, 2.5 L water",10),
           b(1230,1245,"8:30",NIGHT[n][0],NIGHT[n][1],10),
           b(1245,1260,"8:45","Body + hands","Rich cream on elbows, knees, heels; hand cream before bed",5)];
 }
@@ -295,7 +298,7 @@ function render(){
   for(const t of ["sched","skin"]){
     const el = $("tab-"+t), sub = all.filter(x=>x.tab===t);
     el.setAttribute("aria-selected", tab===t);
-    el.innerHTML = (t==="sched"?"Schedule":"Skin care") + `<b>${sub.filter(x=>r.done.includes(x.id)).length}/${sub.length}</b>`;
+    el.innerHTML = (t==="sched"?"Schedule":"Glow up") + `<b>${sub.filter(x=>r.done.includes(x.id)).length}/${sub.length}</b>`;
   }
   $("list").innerHTML = blocks.map(x=>{
     const done = r.done.includes(x.id), cur = isToday && !done && mins>=x.s && mins<x.e;
@@ -307,7 +310,7 @@ function render(){
   const bon = $("bonus");
   bon.className = "bonusline" + (r.bonus?" got":"");
   bon.innerHTML = r.bonus ? `<b>Full day cleared! +${bonusFor(day)} bonus banked.</b>`
-    : `Clear all ${all.length} blocks (schedule + skin care) ${isToday?"today":"this day"} for a <b>+${bonusFor(day)} bonus</b>.`;
+    : `Clear all ${all.length} blocks (schedule + glow up) ${isToday?"today":"this day"} for a <b>+${bonusFor(day)} bonus</b>.`;
   $("today").textContent = fmt(earned) + " / " + fmt(possible);
   document.querySelector(".stat small").textContent = isToday ? "Today" : day.toLocaleDateString("en-US",{month:"short",day:"numeric"});
   $("total").textContent = fmt(totalNow());
